@@ -1,0 +1,269 @@
+
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.SecureRandom;
+import java.util.Scanner;
+import java.security.NoSuchAlgorithmException;
+
+public class It311_code {
+
+    public static void main(String[] args) {
+
+        Scanner input = new Scanner(System.in);
+
+        int option;
+        do {
+            menu();
+            System.out.print("Please enter your choice\t");
+            option = input.nextInt(); //to let the user choice from the menu.
+
+            switch (option) {
+
+                //Encrypt
+                case 1: {
+
+                    System.out.print("Enter the message you what to encrypt: ");
+                    String MSG = input.next();
+                    Encrypt_Message(MSG);
+
+                }
+                break;
+
+                //Decrypt
+                case 2: {
+                    System.out.print("Enter the message you what to decrypt: ");
+                    String ciphertext = input.next();
+                    System.out.print("Enter your key: ");
+                    String key = input.next();
+                    System.out.print("Enter the cipher hash: ");
+                    String Cipher_Hash = input.next();
+                    Decrypt_Message(ciphertext, key, Cipher_Hash);
+
+                }
+                break;
+
+                //Exit
+                case 3: {
+                    System.out.println("Exiting the program...");
+                }
+                break;
+
+                default: {
+                    System.out.println("Invalid choice. Please try again.\n");
+                    break;
+                }
+
+            }
+
+        } while (option != 3);
+    }
+
+    public static void menu() {
+        System.out.println("""
+                           
+                           --------------Menu--------------
+                           1. Encrypt a message
+                           2. Decrypt a message
+                           3. Exit
+                           --------------------------------
+                           """);
+    }
+
+    //Encryption
+    public static void Encrypt_Message(String MSG) {
+
+        //First Convert Message to binary
+        String binary_MSG = StringToBinary(MSG);
+        System.out.println("\nBinary message: " + binary_MSG);
+
+        //Swap the digits
+        String Swapped_MSG = Swap(binary_MSG, MSG.length());
+        System.out.println("Swapped message: " + Swapped_MSG);
+
+        //Generate a random key, to be displayed for users 
+        String key = Generate_A_Key(MSG.length());
+        System.out.println("Your key: " + key);
+
+        //Convert the key into binary
+        String Binary_key = StringToBinary(key);
+        System.out.println("Your key in Binary: " + Binary_key);
+
+        //XOR operation
+        String XOR_MSG = XOR_Operation(Swapped_MSG, Binary_key);
+        System.out.println("The message after applying XOR Operation: " + XOR_MSG);
+        System.out.println("-----------------------------------------------------------------");
+
+        //Hash function
+        String Hash_MSG = Hash_Function(binary_MSG);
+
+        //Results
+        System.out.println("\n\n                         ~~~~~~~~Results~~~~~~~~                  ");
+        System.out.println("Ciphertext: " + XOR_MSG);
+        System.out.println("Cipher Hash: " + Hash_MSG);
+        System.out.println("Your key: " + key);
+        System.out.println("                         ~~~~~~~~~~~~~~~~~~~~~~~  ");
+
+    }
+
+    //Encryption methods
+    public static String StringToBinary(String MSG) {
+        StringBuilder binary_MSG = new StringBuilder(); //StringBuilder is created to build the binary string.
+        for (char c : MSG.toCharArray()) {
+            String bin = Integer.toBinaryString(c);// A 65  1000001 .... 7 digits
+            while (bin.length() < 8) { //Ensure that the string have 8 digit. 
+                bin = "0" + bin; //  A= 01000001 .... 8 digits
+            }
+            binary_MSG.append(bin);
+            /* This process concatenates the binary representations of each character 
+                                 in the input string into one continuous string of binary digits.*/
+        }
+        return binary_MSG.toString();
+    }
+
+    public static String Swap(String binary_MSG, int Length_Of_MSG) {
+
+        char[] charArray = binary_MSG.toCharArray(); //Convert string into an array
+        int mid = charArray.length / 2; //Divide the array into two parts
+
+        // Swap characters in the first half
+        int left = 0;
+        int right = mid - 1;
+        for (int i = 0; i < Length_Of_MSG; i++) {
+            // Swap characters at left and right indices
+            char temp = charArray[left];
+            charArray[left] = charArray[right];
+            charArray[right] = temp;
+
+            // Move towards the center
+            left++;
+            right--;
+        }
+
+        // Swap characters in the second half
+        left = mid;
+        right = charArray.length - 1;
+        for (int i = 0; i < Length_Of_MSG; i++) {
+            // Swap characters at left and right indices
+            char temp = charArray[left];
+            charArray[left] = charArray[right];
+            charArray[right] = temp;
+
+            // Move towards the center
+            left++;
+            right--;
+        }
+
+        return new String(charArray);
+    }
+
+    public static String Generate_A_Key(int Length_Of_MSG) {
+
+        SecureRandom random = new SecureRandom();
+        StringBuilder key = new StringBuilder();
+
+        // Generate a random integer key within the specified length constraint
+        int maxLength = (int) Math.pow(10, Length_Of_MSG);//To calculate the maximum key value within a specified length
+        int keyInt = random.nextInt(maxLength);
+
+        // Convert the integer key to a string
+        return Integer.toString(keyInt);
+    }
+
+    public static String XOR_Operation(String Swapped_MSG, String Binary_key) {
+        StringBuilder XOR_MSG = new StringBuilder();
+
+        //if key shorter than the binary message , A 65  1000001 .... 7 digits
+        while (Binary_key.length() < Swapped_MSG.length()) { //Ensure that the strings have the same length 
+            Binary_key = "0" + Binary_key; //  A= 01000001 .... 8 digits
+        }
+
+        for (int i = 0; i < Swapped_MSG.length(); i++) {
+            char bit1 = Swapped_MSG.charAt(i);
+            char bit2 = Binary_key.charAt(i);
+
+            if (bit1 == bit2) {
+                XOR_MSG.append('0');
+            } else {
+                XOR_MSG.append('1');
+            }
+
+        }
+
+        return XOR_MSG.toString();
+
+    }
+
+    public static String Hash_Function(String binary_MSG) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(binary_MSG.getBytes(StandardCharsets.UTF_8));/*converts the input text into a byte array and calculates the 
+                                                                                             hash using the digest method of the MessageDigest object*/
+
+            StringBuilder hexString = new StringBuilder();//StringBuilder is created to build the hexadecimal string.
+            for (byte b : hash) {//Convert byte to hex
+                String hex = Integer.toHexString(0xff & b);//(0xff & b)-->AND operation ,Ensure giving a positive integer
+                if (hex.length() == 1) {
+                    hexString.append('0');
+                }
+                hexString.append(hex);
+            }
+            return hexString.toString();
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    //Decryption
+    public static void Decrypt_Message(String ciphertext, String key, String Cipher_Hash) {
+
+        //Convert Key to binary
+        String Binary_Key = StringToBinary(key);
+        
+        //Decrypted XOR operation
+        String Decrypted_XOR = XOR_Operation(ciphertext, Binary_Key);
+        
+        //Swap Back
+        int length_Of_BinaryMessage = ciphertext.length();
+        String swappedBack = Swap(Decrypted_XOR, length_Of_BinaryMessage / 8);
+
+      
+        // Verify integrity by comparing hashes
+        String Verification_cipher = Hash_Function(swappedBack);
+        if (Verification_cipher.equals(Cipher_Hash)) {
+            System.out.println("\ncorrect cipher");
+
+            System.out.println("-------------------------------------------------------------");
+
+            //Display result of Convert Key to binary
+            System.out.println("Your key in Binary: " + Binary_Key);
+
+            //Display result of Decrypted XOR operation
+            System.out.println("Decrypted XOR operation: " + Decrypted_XOR);
+
+            //Display result of Swap Back
+            System.out.println("Swap Back: " + swappedBack);
+
+            System.out.println("-------------------------------------------------------------");
+
+            //Convert binary to original message
+            String Original_Message = BinaryToString(swappedBack);
+            System.out.println("\nOriginal Message: " + Original_Message);
+        } else {
+            System.out.println("\nnot correct, Make sure you enter the correct cipher");
+
+        }
+
+    }
+
+    //Decryption method
+    public static String BinaryToString(String binary) {
+        StringBuilder msg = new StringBuilder();
+        for (int i = 0; i < binary.length(); i += 8) {
+            String byteString = binary.substring(i, i + 8);
+            int charCode = Integer.parseInt(byteString, 2);
+            msg.append((char) charCode);
+        }
+        return msg.toString();
+    }
+
+}
